@@ -95,6 +95,30 @@ html,body{background:var(--bg);font-size:16px;}
 .nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;padding:14px 4px 18px;background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);transition:color .2s;}
 .nav-btn.active{color:var(--accent2);}
 .nav-icon{font-size:22px;line-height:1;}
+
+/* ===== MODAL CATEGORIAS ===== */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);z-index:200;align-items:flex-end;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:28px 28px 0 0;width:100%;max-width:480px;padding:28px 22px 40px;animation:slideUp .3s ease;}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-style:italic;color:var(--silver);margin-bottom:20px;}
+.modal-cat-list{display:flex;flex-direction:column;gap:0;border-radius:16px;overflow:hidden;border:1px solid var(--border);margin-bottom:20px;}
+.modal-cat-row{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--bg3);border-bottom:1px solid var(--border);}
+.modal-cat-row:last-child{border-bottom:none;}
+.modal-cat-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.modal-cat-name{flex:1;font-size:15px;color:var(--silver2);}
+.modal-cat-del{background:none;border:none;cursor:pointer;color:var(--muted);font-size:20px;padding:4px 8px;line-height:1;}
+.modal-cat-del:active{color:var(--danger);}
+.modal-cat-del.locked{opacity:.2;cursor:default;}
+.modal-add-row{display:flex;gap:10px;align-items:center;}
+.modal-add-row input{flex:1;font-size:16px;font-family:'DM Sans',sans-serif;border:none;border-bottom:1px solid var(--border2);padding:10px 0;background:transparent;color:var(--text);outline:none;}
+.modal-add-row input:focus{border-bottom-color:var(--accent);}
+.modal-add-btn{background:var(--accent);border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-family:'DM Sans',sans-serif;color:#fff;cursor:pointer;white-space:nowrap;}
+.modal-add-btn:active{opacity:.8;}
+.modal-close{width:100%;background:none;border:1px solid var(--border2);border-radius:12px;padding:14px;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:14px;}
+.modal-close:active{background:var(--bg3);}
+.cat-mgr-btn{background:none;border:1px solid var(--border);border-radius:10px;padding:7px 13px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);cursor:pointer;font-family:'DM Sans',sans-serif;margin-left:10px;vertical-align:middle;}
+.cat-mgr-btn:active{background:var(--bg3);}
 </style>
 </head>
 <body>
@@ -120,8 +144,8 @@ html,body{background:var(--bg);font-size:16px;}
         <div class="field"><label>Valor (R$)</label><input type="number" id="amount" inputmode="decimal" placeholder="0,00" min="0" step="0.01"/></div>
         <div class="field"><label>Data</label><input type="date" id="dateInput"/></div>
       </div>
-      <div class="field"><label>Categoria</label>
-        <select id="cat"><option>Alimentação</option><option>Moradia</option><option>Transporte</option><option>Saúde</option><option>Lazer</option><option>Educação</option><option>Uber</option><option>Carona</option><option>Outros</option></select>
+      <div class="field"><label>Categoria <button class="cat-mgr-btn" id="openCatModal">Gerenciar</button></label>
+        <select id="cat"></select>
       </div>
       <button class="btn-add" id="addBtn">Registrar</button>
     </div>
@@ -176,18 +200,35 @@ html,body{background:var(--bg);font-size:16px;}
     <button class="nav-btn" data-screen="resumo"><span class="nav-icon">◎</span><span>Resumo</span></button>
     <button class="nav-btn" data-screen="ano"><span class="nav-icon">◈</span><span>Ano</span></button>
   </div>
+
+  <!-- MODAL CATEGORIAS -->
+  <div class="modal-overlay" id="catModal">
+    <div class="modal-box">
+      <div class="modal-title">Gerenciar categorias</div>
+      <div class="modal-cat-list" id="modalCatList"></div>
+      <div class="modal-add-row">
+        <input type="text" id="newCatInput" placeholder="Nova categoria..." maxlength="30" autocomplete="off"/>
+        <button class="modal-add-btn" id="newCatBtn">Adicionar</button>
+      </div>
+      <button class="modal-close" id="modalCloseBtn">Fechar</button>
+    </div>
+  </div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 const MONTHS=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const MS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-const CATS=['Alimentação','Moradia','Transporte','Saúde','Lazer','Educação','Uber','Carona','Outros'];
-const COLORS=['#4f8ef7','#5db88a','#e07a5f','#9b7fe8','#54b4d3','#e8b45a','#888888','#2ecc71','#7a8fa8'];
+const DEFAULT_CATS=['Alimentação','Moradia','Transporte','Saúde','Lazer','Educação','Uber','Carona','Outros'];
+const DEFAULT_COLORS=['#4f8ef7','#5db88a','#e07a5f','#9b7fe8','#54b4d3','#e8b45a','#888888','#2ecc71','#7a8fa8'];
+const EXTRA_COLORS=['#e8b45a','#f97b6b','#c084fc','#f472b6','#fb923c','#34d399','#60a5fa','#a78bfa','#f9a8d4','#6ee7b7'];
+function loadJSON(k,d){try{return JSON.parse(localStorage.getItem(k))||d;}catch{return d;}}
+let CATS=loadJSON('gastos_cats',DEFAULT_CATS);
+let COLORS=CATS.map((_,i)=>DEFAULT_COLORS[i]||EXTRA_COLORS[i%EXTRA_COLORS.length]);
 const now=new Date();
 let cm=now.getMonth(),cy=now.getFullYear(),vy=cy,pieChart=null,lineChart=null;
 function loadData(){try{return JSON.parse(localStorage.getItem('gastos_data')||'{}')}catch{return {};}}
 function loadMetas(){try{return JSON.parse(localStorage.getItem('gastos_metas')||'{}')}catch{return {};}}
-function save(){localStorage.setItem('gastos_data',JSON.stringify(appData));localStorage.setItem('gastos_metas',JSON.stringify(metas));}
+function save(){localStorage.setItem('gastos_data',JSON.stringify(appData));localStorage.setItem('gastos_metas',JSON.stringify(metas));localStorage.setItem('gastos_cats',JSON.stringify(CATS));}
 let appData=loadData(),metas=loadMetas();
 const mkey=(y,m)=>`${y}-${m}`;
 const exps=(y,m)=>appData[mkey(y,m)]||[];
@@ -295,6 +336,80 @@ document.getElementById('addBtn').addEventListener('click',()=>{
   save();
   document.getElementById('desc').value='';document.getElementById('amount').value='';document.getElementById('dateInput').value=todayStr();render();
 });
+
+// ===== CATEGORIA SELECT REFRESH =====
+function refreshCatSelect(){
+  COLORS=CATS.map((_,i)=>DEFAULT_COLORS[i]||EXTRA_COLORS[i%EXTRA_COLORS.length]);
+  const sel=document.getElementById('cat');
+  const cur=sel.value;
+  sel.innerHTML=CATS.map(c=>`<option${c===cur?' selected':''}>${c}</option>`).join('');
+  if(!CATS.includes(cur)&&CATS.length)sel.value=CATS[0];
+}
+
+// ===== MODAL DE CATEGORIAS =====
+function openCatModal(){
+  renderModalList();
+  document.getElementById('catModal').classList.add('open');
+}
+function closeCatModal(){
+  document.getElementById('catModal').classList.remove('open');
+  refreshCatSelect();
+  render();
+}
+function renderModalList(){
+  const usageCount={};
+  Object.values(appData).forEach(arr=>arr.forEach(e=>{usageCount[e.cat]=(usageCount[e.cat]||0)+1;}));
+  const list=document.getElementById('modalCatList');
+  list.innerHTML=CATS.map((c,i)=>{
+    const col=COLORS[i]||'#7a8fa8';
+    const used=usageCount[c]||0;
+    const canDel=CATS.length>1;
+    return `<div class="modal-cat-row" id="mcr-${i}">
+      <span class="modal-cat-dot" style="background:${col}"></span>
+      <span class="modal-cat-name">${c}${used>0?` <span style="font-size:11px;color:var(--text3)">(${used})</span>`:''}</span>
+      ${canDel
+        ? `<button class="modal-cat-del" data-idx="${i}" data-cat="${c}" data-used="${used}">×</button>`
+        : `<button class="modal-cat-del locked" disabled title="Mínimo 1 categoria">×</button>`
+      }
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.modal-cat-del:not(.locked)').forEach(btn=>btn.addEventListener('click',ev=>{
+    const idx=parseInt(ev.target.dataset.idx);
+    const cat=ev.target.dataset.cat;
+    const used=parseInt(ev.target.dataset.used)||0;
+    const row=document.getElementById('mcr-'+idx);
+    // Replace row with inline confirm
+    row.innerHTML=`
+      <span style="flex:1;font-size:13px;color:var(--danger);">Excluir "${cat}"${used>0?' ('+used+' gasto(s))':''}?</span>
+      <button id="conf-yes-${idx}" style="background:var(--danger);border:none;border-radius:8px;color:#fff;padding:6px 14px;font-size:13px;cursor:pointer;font-family:inherit;">Sim</button>
+      <button id="conf-no-${idx}"  style="background:none;border:1px solid var(--border2);border-radius:8px;color:var(--text3);padding:6px 14px;font-size:13px;cursor:pointer;font-family:inherit;margin-left:6px;">Não</button>
+    `;
+    document.getElementById('conf-no-'+idx).addEventListener('click',renderModalList);
+    document.getElementById('conf-yes-'+idx).addEventListener('click',()=>{
+      CATS=CATS.filter(c=>c!==cat);
+      COLORS=CATS.map((_,i)=>DEFAULT_COLORS[i]||EXTRA_COLORS[i%EXTRA_COLORS.length]);
+      save();
+      renderModalList();
+    });
+  }));
+}
+document.getElementById('openCatModal').addEventListener('click',openCatModal);
+document.getElementById('modalCloseBtn').addEventListener('click',closeCatModal);
+document.getElementById('catModal').addEventListener('click',ev=>{if(ev.target===document.getElementById('catModal'))closeCatModal();});
+document.getElementById('newCatBtn').addEventListener('click',()=>{
+  const inp=document.getElementById('newCatInput');
+  const name=inp.value.trim();
+  if(!name)return;
+  if(CATS.map(c=>c.toLowerCase()).includes(name.toLowerCase())){alert('Categoria já existe!');return;}
+  CATS.push(name);
+  COLORS=CATS.map((_,i)=>DEFAULT_COLORS[i]||EXTRA_COLORS[i%EXTRA_COLORS.length]);
+  save();
+  inp.value='';
+  renderModalList();
+});
+document.getElementById('newCatInput').addEventListener('keydown',ev=>{if(ev.key==='Enter')document.getElementById('newCatBtn').click();});
+
+refreshCatSelect();
 render();
 </script>
 </body>
