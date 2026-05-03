@@ -84,19 +84,6 @@ html,body{background:var(--bg);font-size:16px;}
 .e-del{background:none;border:none;cursor:pointer;color:var(--muted);font-size:22px;padding:6px;flex-shrink:0;}
 .e-del:active{color:var(--danger);}
 .empty{font-size:18px;color:var(--text3);text-align:center;padding:3rem 0;font-style:italic;font-family:'Cormorant Garamond',serif;}
-.cat-bar-row{cursor:pointer;user-select:none;}
-.cat-bar-row:active{background:var(--bg3);}
-.cat-chevron{font-size:11px;color:var(--text3);margin-left:4px;transition:transform .25s;flex-shrink:0;}
-.cat-chevron.open{transform:rotate(180deg);}
-.cat-detail{display:none;flex-direction:column;background:var(--bg3);border-top:1px solid var(--border);}
-.cat-detail.open{display:flex;}
-.cat-detail-item{display:flex;align-items:center;gap:12px;padding:13px 18px 13px 36px;border-bottom:1px solid var(--border);}
-.cat-detail-item:last-child{border-bottom:none;}
-.cd-info{flex:1;min-width:0;}
-.cd-desc{font-size:14px;color:var(--silver2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.cd-date{font-size:11px;color:var(--text3);margin-top:2px;}
-.cd-amt{font-size:14px;color:var(--silver);font-variant-numeric:tabular-nums;flex-shrink:0;}
-.cat-detail-empty{padding:14px 18px 14px 36px;font-size:13px;color:var(--text3);font-style:italic;}
 .annual-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px;}
 .annual-cell{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px 12px;}
 .annual-cell.current{border-color:rgba(79,142,247,.4);}
@@ -134,7 +121,7 @@ html,body{background:var(--bg);font-size:16px;}
         <div class="field"><label>Data</label><input type="date" id="dateInput"/></div>
       </div>
       <div class="field"><label>Categoria</label>
-        <select id="cat"><option>Alimentação</option><option>Moradia</option><option>Transporte</option><option>Saúde</option><option>Lazer</option><option>Educação</option><option>Outros</option></select>
+        <select id="cat"><option>Alimentação</option><option>Moradia</option><option>Transporte</option><option>Saúde</option><option>Lazer</option><option>Educação</option><option>Uber</option><option>Carona</option><option>Outros</option></select>
       </div>
       <button class="btn-add" id="addBtn">Registrar</button>
     </div>
@@ -194,8 +181,8 @@ html,body{background:var(--bg);font-size:16px;}
 <script>
 const MONTHS=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const MS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-const CATS=['Alimentação','Moradia','Transporte','Saúde','Lazer','Educação','Outros'];
-const COLORS=['#4f8ef7','#5db88a','#e07a5f','#9b7fe8','#54b4d3','#e8b45a','#7a8fa8'];
+const CATS=['Alimentação','Moradia','Transporte','Saúde','Lazer','Educação','Uber','Carona','Outros'];
+const COLORS=['#4f8ef7','#5db88a','#e07a5f','#9b7fe8','#54b4d3','#e8b45a','#1a1a1a','#2ecc71','#7a8fa8'];
 const now=new Date();
 let cm=now.getMonth(),cy=now.getFullYear(),vy=cy,pieChart=null,lineChart=null;
 function loadData(){try{return JSON.parse(localStorage.getItem('gastos_data')||'{}')}catch{return {};}}
@@ -207,10 +194,10 @@ const exps=(y,m)=>appData[mkey(y,m)]||[];
 const fmt=v=>'R$\u00a0'+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtS=v=>'R$\u00a0'+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
 const dim=(y,m)=>new Date(y,m+1,0).getDate();
-const todayStr=()=>now.toISOString().slice(0,10);
+const todayStr=()=>{const n=new Date();return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;};
 const fmtD=s=>{if(!s)return '';const[,m,d]=s.split('-');return `${d}/${m}`;};
 const isToday=s=>s===todayStr();
-const isYest=s=>{const y=new Date(now);y.setDate(y.getDate()-1);return s===y.toISOString().slice(0,10);};
+const isYest=s=>{const y=new Date();y.setDate(y.getDate()-1);return s===`${y.getFullYear()}-${String(y.getMonth()+1).padStart(2,'0')}-${String(y.getDate()).padStart(2,'0')}`;};
 const dayLbl=s=>{if(!s)return '';if(isToday(s))return 'Hoje';if(isYest(s))return 'Ontem';return fmtD(s);};
 document.getElementById('dateInput').value=todayStr();
 function setLabels(){const t=MONTHS[cm]+' '+cy;['monthLabel','monthLabel2'].forEach(id=>document.getElementById(id).textContent=t);document.getElementById('heroLabel').textContent='Total em '+MONTHS[cm];}
@@ -249,44 +236,11 @@ function renderResumo(){
   document.getElementById('metaInput').value=meta||'';
   if(meta>0){const s=meta-total,p=Math.min(100,Math.round(total/meta*100));const el=document.getElementById('rMeta');el.textContent=fmt(Math.abs(s));el.className='hero-stat-val '+(s<0?'danger':'success');document.getElementById('metaPct').textContent=p+'%';const b=document.getElementById('metaBar');b.style.width=p+'%';b.className='meta-bar-fill'+(s<0?' over':'');}
   else{document.getElementById('rMeta').textContent='Sem meta';document.getElementById('rMeta').className='hero-stat-val';document.getElementById('metaPct').textContent='';document.getElementById('metaBar').style.width='0%';}
-  renderAccordionBars(bc,'catBars');renderPie(bc,total);
+  renderBars(bc,'catBars');renderPie(bc,total);
 }
 function renderBars(bc,id){
   const mx=Math.max(...CATS.map(c=>bc[c]||0),1);
   document.getElementById(id).innerHTML=CATS.map((c,i)=>{const v=bc[c]||0,p=Math.round(v/mx*100);return `<div class="cat-bar-row"><span class="cat-dot" style="background:${COLORS[i]}"></span><span class="cat-name">${c}</span><div class="cat-track"><div class="cat-fill" style="width:${p}%;background:${COLORS[i]}"></div></div><span class="cat-amt">${fmt(v)}</span></div>`;}).join('');
-}
-function renderAccordionBars(bc,id){
-  const e=exps(cy,cm);
-  const mx=Math.max(...CATS.map(c=>bc[c]||0),1);
-  const expandedCats=new Set(window._expandedCats||[]);
-  const html=CATS.map((c,i)=>{
-    const v=bc[c]||0,p=Math.round(v/mx*100);
-    const isOpen=expandedCats.has(c);
-    const items=e.filter(x=>x.cat===c).sort((a,b)=>(!a.date&&!b.date)?0:(!a.date?1:(!b.date?-1:b.date.localeCompare(a.date))));
-    const detailHtml=items.length
-      ?items.map(x=>`<div class="cat-detail-item"><div class="cd-info"><div class="cd-desc">${x.desc}</div><div class="cd-date">${x.date?fmtD(x.date):'Sem data'}</div></div><div class="cd-amt">${fmt(x.amount)}</div></div>`).join('')
-      :`<div class="cat-detail-empty">Nenhum lançamento</div>`;
-    return `<div class="cat-accordion" data-cat="${c}">
-      <div class="cat-bar-row" data-toggle="${c}">
-        <span class="cat-dot" style="background:${COLORS[i]}"></span>
-        <span class="cat-name">${c}</span>
-        <div class="cat-track"><div class="cat-fill" style="width:${p}%;background:${COLORS[i]}"></div></div>
-        <span class="cat-amt">${fmt(v)}</span>
-        <span class="cat-chevron${isOpen?' open':''}">▼</span>
-      </div>
-      <div class="cat-detail${isOpen?' open':''}">${detailHtml}</div>
-    </div>`;
-  }).join('');
-  document.getElementById(id).innerHTML=html;
-  document.getElementById(id).querySelectorAll('[data-toggle]').forEach(row=>{
-    row.addEventListener('click',()=>{
-      const cat=row.dataset.toggle;
-      if(!window._expandedCats)window._expandedCats=[];
-      const idx=window._expandedCats.indexOf(cat);
-      if(idx>=0)window._expandedCats.splice(idx,1);else window._expandedCats.push(cat);
-      renderAccordionBars(bc,id);
-    });
-  });
 }
 function renderPie(bc,total){
   const lb=CATS.filter(c=>bc[c]>0),vl=lb.map(c=>bc[c]),cl=lb.map(c=>COLORS[CATS.indexOf(c)]);
