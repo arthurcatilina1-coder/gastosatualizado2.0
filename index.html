@@ -182,7 +182,7 @@ html,body{background:var(--bg);font-size:16px;}
 const MONTHS=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const MS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 const CATS=['Alimentação','Moradia','Transporte','Saúde','Lazer','Educação','Uber','Carona','Outros'];
-const COLORS=['#4f8ef7','#5db88a','#e07a5f','#9b7fe8','#54b4d3','#e8b45a','#1a1a1a','#2ecc71','#7a8fa8'];
+const COLORS=['#4f8ef7','#5db88a','#e07a5f','#9b7fe8','#54b4d3','#e8b45a','#888888','#2ecc71','#7a8fa8'];
 const now=new Date();
 let cm=now.getMonth(),cy=now.getFullYear(),vy=cy,pieChart=null,lineChart=null;
 function loadData(){try{return JSON.parse(localStorage.getItem('gastos_data')||'{}')}catch{return {};}}
@@ -197,7 +197,7 @@ const dim=(y,m)=>new Date(y,m+1,0).getDate();
 const todayStr=()=>{const n=new Date();return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;};
 const fmtD=s=>{if(!s)return '';const[,m,d]=s.split('-');return `${d}/${m}`;};
 const isToday=s=>s===todayStr();
-const isYest=s=>{const y=new Date();y.setDate(y.getDate()-1);return s===`${y.getFullYear()}-${String(y.getMonth()+1).padStart(2,'0')}-${String(y.getDate()).padStart(2,'0')}`;};
+const isYest=s=>{const n=new Date();n.setDate(n.getDate()-1);return s===`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;};
 const dayLbl=s=>{if(!s)return '';if(isToday(s))return 'Hoje';if(isYest(s))return 'Ontem';return fmtD(s);};
 document.getElementById('dateInput').value=todayStr();
 function setLabels(){const t=MONTHS[cm]+' '+cy;['monthLabel','monthLabel2'].forEach(id=>document.getElementById(id).textContent=t);document.getElementById('heroLabel').textContent='Total em '+MONTHS[cm];}
@@ -223,10 +223,27 @@ function renderList(e){
   go.forEach(k=>{
     const lbl=k==='__'?'Sem data':dayLbl(k)+(k!==todayStr()&&!isYest(k)?'  ·  '+fmtD(k):'');
     h+=`<div class="day-group-label">${lbl}</div>`;
-    g[k].forEach(x=>{const col=COLORS[CATS.indexOf(x.cat)]||'#7a8fa8';h+=`<div class="expense-item"><span class="cat-dot-lg" style="background:${col}"></span><div class="e-info"><div class="e-desc">${x.desc}</div><div class="e-cat">${x.cat}</div></div><div class="e-amt">${fmt(x.amount)}</div><button class="e-del" data-i="${x.oi}">×</button></div>`;});
+    g[k].forEach(x=>{
+      const col=COLORS[CATS.indexOf(x.cat)]||'#7a8fa8';
+      const opts=CATS.map(c=>`<option${c===x.cat?' selected':''}>${c}</option>`).join('');
+      h+=`<div class="expense-item">
+        <span class="cat-dot-lg" style="background:${col}"></span>
+        <div class="e-info">
+          <div class="e-desc">${x.desc}</div>
+          <select class="e-cat-sel" data-i="${x.oi}" style="background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,.1);color:var(--text3);font-size:12px;font-family:inherit;padding:2px 0;outline:none;cursor:pointer;-webkit-appearance:none;width:auto;max-width:140px;">${opts}</select>
+        </div>
+        <div class="e-amt">${fmt(x.amount)}</div>
+        <button class="e-del" data-i="${x.oi}">×</button>
+      </div>`;
+    });
   });
   el.innerHTML=h;
   el.querySelectorAll('.e-del').forEach(b=>b.addEventListener('click',ev=>{appData[mkey(cy,cm)].splice(parseInt(ev.target.dataset.i),1);save();render();}));
+  el.querySelectorAll('.e-cat-sel').forEach(sel=>sel.addEventListener('change',ev=>{
+    const i=parseInt(ev.target.dataset.i);
+    appData[mkey(cy,cm)][i].cat=ev.target.value;
+    save();render();
+  }));
 }
 function renderResumo(){
   const{total,media,bc}=stats();
