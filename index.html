@@ -119,6 +119,26 @@ html,body{background:var(--bg);font-size:16px;}
 .modal-close:active{background:var(--bg3);}
 .cat-mgr-btn{background:none;border:1px solid var(--border);border-radius:10px;padding:7px 13px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);cursor:pointer;font-family:'DM Sans',sans-serif;margin-left:10px;vertical-align:middle;}
 .cat-mgr-btn:active{background:var(--bg3);}
+
+/* ===== MODAL DETALHES CATEGORIA ===== */
+.cat-bar-row{cursor:pointer;transition:background .18s;}
+.cat-bar-row:active{background:var(--bg3);}
+.cat-detail-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(7px);z-index:200;align-items:flex-end;justify-content:center;}
+.cat-detail-overlay.open{display:flex;}
+.cat-detail-box{background:var(--bg2);border:1px solid var(--border2);border-radius:28px 28px 0 0;width:100%;max-width:480px;padding:28px 22px 40px;animation:slideUp .3s ease;max-height:80vh;overflow-y:auto;}
+.cat-detail-header{display:flex;align-items:center;gap:12px;margin-bottom:6px;}
+.cat-detail-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;}
+.cat-detail-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-style:italic;color:var(--silver);flex:1;}
+.cat-detail-total{font-size:15px;color:var(--accent2);font-variant-numeric:tabular-nums;}
+.cat-detail-count{font-size:12px;color:var(--text3);margin-bottom:20px;padding-left:23px;}
+.cat-detail-list{display:flex;flex-direction:column;background:var(--bg3);border-radius:16px;border:1px solid var(--border);overflow:hidden;margin-bottom:20px;}
+.cat-detail-item{display:flex;align-items:center;gap:12px;padding:15px 16px;border-bottom:1px solid var(--border);}
+.cat-detail-item:last-child{border-bottom:none;}
+.cat-detail-desc{flex:1;min-width:0;}
+.cat-detail-desc-text{font-size:15px;color:var(--silver2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cat-detail-date{font-size:11px;color:var(--text3);margin-top:3px;}
+.cat-detail-amt{font-size:15px;color:var(--silver);font-variant-numeric:tabular-nums;flex-shrink:0;}
+.cat-detail-empty{font-size:17px;color:var(--text3);text-align:center;padding:2.5rem 0;font-style:italic;font-family:'Cormorant Garamond',serif;}
 </style>
 </head>
 <body>
@@ -201,6 +221,20 @@ html,body{background:var(--bg);font-size:16px;}
     <button class="nav-btn" data-screen="ano"><span class="nav-icon">◈</span><span>Ano</span></button>
   </div>
 
+  <!-- MODAL DETALHES CATEGORIA -->
+  <div class="cat-detail-overlay" id="catDetailModal">
+    <div class="cat-detail-box">
+      <div class="cat-detail-header">
+        <span class="cat-detail-dot" id="catDetailDot"></span>
+        <span class="cat-detail-title" id="catDetailTitle"></span>
+        <span class="cat-detail-total" id="catDetailTotal"></span>
+      </div>
+      <div class="cat-detail-count" id="catDetailCount"></div>
+      <div class="cat-detail-list" id="catDetailList"></div>
+      <button class="modal-close" id="catDetailCloseBtn">Fechar</button>
+    </div>
+  </div>
+
   <!-- MODAL CATEGORIAS -->
   <div class="modal-overlay" id="catModal">
     <div class="modal-box">
@@ -221,10 +255,11 @@ const MS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez
 const DEFAULT_CATS=['Alimentação','Moradia','Transporte','Saúde','Lazer','Educação','Uber','Carona','Outros'];
 const DEFAULT_COLORS=['#4f8ef7','#5db88a','#e07a5f','#9b7fe8','#54b4d3','#e8b45a','#888888','#2ecc71','#7a8fa8'];
 const EXTRA_COLORS=['#e8b45a','#f97b6b','#c084fc','#f472b6','#fb923c','#34d399','#60a5fa','#a78bfa','#f9a8d4','#6ee7b7'];
+function nowBrasilia(){const d=new Date();return new Date(d.toLocaleString('en-US',{timeZone:'America/Sao_Paulo'}));}
 function loadJSON(k,d){try{return JSON.parse(localStorage.getItem(k))||d;}catch{return d;}}
 let CATS=loadJSON('gastos_cats',DEFAULT_CATS);
 let COLORS=CATS.map((_,i)=>DEFAULT_COLORS[i]||EXTRA_COLORS[i%EXTRA_COLORS.length]);
-const now=new Date();
+const now=nowBrasilia();
 let cm=now.getMonth(),cy=now.getFullYear(),vy=cy,pieChart=null,lineChart=null;
 function loadData(){try{return JSON.parse(localStorage.getItem('gastos_data')||'{}')}catch{return {};}}
 function loadMetas(){try{return JSON.parse(localStorage.getItem('gastos_metas')||'{}')}catch{return {};}}
@@ -235,16 +270,16 @@ const exps=(y,m)=>appData[mkey(y,m)]||[];
 const fmt=v=>'R$\u00a0'+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtS=v=>'R$\u00a0'+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
 const dim=(y,m)=>new Date(y,m+1,0).getDate();
-const todayStr=()=>{const n=new Date();return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;};
+const todayStr=()=>{const n=nowBrasilia();return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;};
 const fmtD=s=>{if(!s)return '';const[,m,d]=s.split('-');return `${d}/${m}`;};
 const isToday=s=>s===todayStr();
-const isYest=s=>{const n=new Date();n.setDate(n.getDate()-1);return s===`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;};
+const isYest=s=>{const n=nowBrasilia();n.setDate(n.getDate()-1);return s===`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;};
 const dayLbl=s=>{if(!s)return '';if(isToday(s))return 'Hoje';if(isYest(s))return 'Ontem';return fmtD(s);};
 document.getElementById('dateInput').value=todayStr();
 function setLabels(){const t=MONTHS[cm]+' '+cy;['monthLabel','monthLabel2'].forEach(id=>document.getElementById(id).textContent=t);document.getElementById('heroLabel').textContent='Total em '+MONTHS[cm];}
 function stats(){
   const e=exps(cy,cm),bc={};CATS.forEach(c=>bc[c]=0);e.forEach(x=>bc[x.cat]=(bc[x.cat]||0)+x.amount);
-  const total=e.reduce((s,x)=>s+x.amount,0),pass=(cy===now.getFullYear()&&cm===now.getMonth())?now.getDate():dim(cy,cm);
+  const nb=nowBrasilia(),total=e.reduce((s,x)=>s+x.amount,0),pass=(cy===nb.getFullYear()&&cm===nb.getMonth())?nb.getDate():dim(cy,cm);
   return{e,bc,total,media:pass>0?total/pass:0,maxCat:CATS.reduce((a,b)=>bc[a]>=bc[b]?a:b)};
 }
 function render(){setLabels();renderAdd();renderResumo();}
@@ -298,8 +333,45 @@ function renderResumo(){
 }
 function renderBars(bc,id){
   const mx=Math.max(...CATS.map(c=>bc[c]||0),1);
-  document.getElementById(id).innerHTML=CATS.map((c,i)=>{const v=bc[c]||0,p=Math.round(v/mx*100);return `<div class="cat-bar-row"><span class="cat-dot" style="background:${COLORS[i]}"></span><span class="cat-name">${c}</span><div class="cat-track"><div class="cat-fill" style="width:${p}%;background:${COLORS[i]}"></div></div><span class="cat-amt">${fmt(v)}</span></div>`;}).join('');
+  const isResumo=(id==='catBars');
+  document.getElementById(id).innerHTML=CATS.map((c,i)=>{const v=bc[c]||0,p=Math.round(v/mx*100);return `<div class="cat-bar-row"${isResumo?` data-cat="${c}" data-col="${COLORS[i]}" style="cursor:pointer"`:''}><span class="cat-dot" style="background:${COLORS[i]}"></span><span class="cat-name">${c}</span><div class="cat-track"><div class="cat-fill" style="width:${p}%;background:${COLORS[i]}"></div></div><span class="cat-amt">${fmt(v)}</span></div>`;}).join('');
+  if(isResumo){
+    document.getElementById(id).querySelectorAll('.cat-bar-row').forEach(row=>{
+      row.addEventListener('click',()=>openCatDetail(row.dataset.cat,row.dataset.col));
+    });
+  }
 }
+
+function openCatDetail(catName,color){
+  const e=exps(cy,cm).filter(x=>x.cat===catName);
+  const total=e.reduce((s,x)=>s+x.amount,0);
+  document.getElementById('catDetailDot').style.background=color;
+  document.getElementById('catDetailTitle').textContent=catName;
+  document.getElementById('catDetailTotal').textContent=fmt(total);
+  document.getElementById('catDetailCount').textContent=e.length===0?'Nenhum lançamento':e.length===1?'1 lançamento':e.length+' lançamentos';
+  const sorted=[...e].sort((a,b)=>(!a.date&&!b.date)?0:(!a.date?1:(!b.date?-1:b.date.localeCompare(a.date))));
+  if(!sorted.length){
+    document.getElementById('catDetailList').innerHTML='<div class="cat-detail-empty">Nenhum gasto nesta categoria</div>';
+  }else{
+    document.getElementById('catDetailList').innerHTML=sorted.map(x=>{
+      const datePart=x.date?fmtD(x.date):'Sem data';
+      const timePart=x.time?x.time:'';
+      const dateLabel=timePart?`${datePart} · ${timePart}`:datePart;
+      return `
+      <div class="cat-detail-item">
+        <div class="cat-detail-desc">
+          <div class="cat-detail-desc-text">${x.desc}</div>
+          <div class="cat-detail-date">${dateLabel}</div>
+        </div>
+        <div class="cat-detail-amt">${fmt(x.amount)}</div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('catDetailModal').classList.add('open');
+}
+function closeCatDetail(){document.getElementById('catDetailModal').classList.remove('open');}
+document.getElementById('catDetailCloseBtn').addEventListener('click',closeCatDetail);
+document.getElementById('catDetailModal').addEventListener('click',ev=>{if(ev.target===document.getElementById('catDetailModal'))closeCatDetail();});
 function renderPie(bc,total){
   const lb=CATS.filter(c=>bc[c]>0),vl=lb.map(c=>bc[c]),cl=lb.map(c=>COLORS[CATS.indexOf(c)]);
   document.getElementById('pieLegend').innerHTML=lb.length?lb.map((c,i)=>`<span class="legend-item"><span class="legend-sq" style="background:${cl[i]}"></span>${c}</span>`).join(''):'<span style="font-size:15px;color:var(--text3);font-style:italic;font-family:\'Cormorant Garamond\',serif">Sem dados</span>';
@@ -332,7 +404,8 @@ document.getElementById('metaInput').addEventListener('change',e=>{metas[mkey(cy
 document.getElementById('addBtn').addEventListener('click',()=>{
   const desc=document.getElementById('desc').value.trim(),amount=parseFloat(document.getElementById('amount').value),cat=document.getElementById('cat').value,date=document.getElementById('dateInput').value;
   if(!desc||isNaN(amount)||amount<=0)return;
-  const k=mkey(cy,cm);if(!appData[k])appData[k]=[];appData[k].push({desc,amount,cat,date});
+  const nb=nowBrasilia(),time=`${String(nb.getHours()).padStart(2,'0')}:${String(nb.getMinutes()).padStart(2,'0')}`;
+  const k=mkey(cy,cm);if(!appData[k])appData[k]=[];appData[k].push({desc,amount,cat,date,time});
   save();
   document.getElementById('desc').value='';document.getElementById('amount').value='';document.getElementById('dateInput').value=todayStr();render();
 });
