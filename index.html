@@ -139,6 +139,7 @@ html,body{background:var(--bg);font-size:16px;}
 .cat-detail-date{font-size:11px;color:var(--text3);margin-top:3px;}
 .cat-detail-amt{font-size:15px;color:var(--silver);font-variant-numeric:tabular-nums;flex-shrink:0;}
 .cat-detail-empty{font-size:17px;color:var(--text3);text-align:center;padding:2.5rem 0;font-style:italic;font-family:'Cormorant Garamond',serif;}
+.e-time{font-size:11px;color:var(--text3);margin-left:7px;font-variant-numeric:tabular-nums;vertical-align:middle;opacity:.8;}
 </style>
 </head>
 <body>
@@ -297,15 +298,16 @@ function renderList(e){
   const g={},go=[];sorted.forEach(x=>{const k=x.date||'__';if(!g[k]){g[k]=[];go.push(k);}g[k].push(x);});
   let h='';
   go.forEach(k=>{
-    const lbl=k==='__'?'Sem data':dayLbl(k)+(k!==todayStr()&&!isYest(k)?'  ·  '+fmtD(k):'');
+    const lbl=k==='__'?'Sem data':fmtD(k);
     h+=`<div class="day-group-label">${lbl}</div>`;
     g[k].forEach(x=>{
       const col=COLORS[CATS.indexOf(x.cat)]||'#7a8fa8';
       const opts=CATS.map(c=>`<option${c===x.cat?' selected':''}>${c}</option>`).join('');
+      const timeBadge=x.time?`<span class="e-time">${x.time}</span>`:'';
       h+=`<div class="expense-item">
         <span class="cat-dot-lg" style="background:${col}"></span>
         <div class="e-info">
-          <div class="e-desc">${x.desc}</div>
+          <div class="e-desc">${x.desc}${timeBadge}</div>
           <select class="e-cat-sel" data-i="${x.oi}" style="background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,.1);color:var(--text3);font-size:12px;font-family:inherit;padding:2px 0;outline:none;cursor:pointer;-webkit-appearance:none;width:auto;max-width:140px;">${opts}</select>
         </div>
         <div class="e-amt">${fmt(x.amount)}</div>
